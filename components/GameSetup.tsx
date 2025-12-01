@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GameState, Player } from '../types';
 import { DEFAULT_BET, TARGET_PERCENTAGE } from '../constants';
-import { Users, DollarSign, ArrowRight } from 'lucide-react';
+import { DollarSign, ArrowRight } from 'lucide-react';
 import { Avatar } from './Avatar';
 
 interface GameSetupProps {
