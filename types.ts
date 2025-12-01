@@ -3,7 +3,11 @@ export interface Player {
   name: string;
   initialWeight: number;
   currentWeight: number;
-  targetWeight: number; // calculated as initial * 0.96 (4% loss)
+  targetWeight: number;
+  weightHistory: Array<{ date: string; weight: number }>;
+  lastUpdateDate: string;
+  cheers: number;
+  badges: string[];
   avatarSeed: string;
 }
 

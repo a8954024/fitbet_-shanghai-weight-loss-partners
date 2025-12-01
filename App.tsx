@@ -24,10 +24,35 @@ const App: React.FC = () => {
 
   const handleUpdatePlayerWeight = (id: number, newWeight: number) => {
     if (!gameState) return;
-    
+
     const updatedPlayers = gameState.players.map(p => {
       if (p.id === id) {
-        return { ...p, currentWeight: newWeight };
+        const today = new Date().toISOString();
+        // Create new history entry
+        const newHistory = [...(p.weightHistory || []), { date: today, weight: newWeight }];
+
+        return {
+          ...p,
+          currentWeight: newWeight,
+          weightHistory: newHistory,
+          lastUpdateDate: today
+        };
+      }
+      return p;
+    });
+
+    setGameState({
+      ...gameState,
+      players: updatedPlayers
+    });
+  };
+
+  const handlePoke = (id: number) => {
+    if (!gameState) return;
+
+    const updatedPlayers = gameState.players.map(p => {
+      if (p.id === id) {
+        return { ...p, cheers: (p.cheers || 0) + 1 };
       }
       return p;
     });
@@ -40,6 +65,7 @@ const App: React.FC = () => {
 
   const handleReset = () => {
     setGameState(null);
+    localStorage.removeItem('fitbet_messages'); // Also clear messages
   };
 
   return (
@@ -64,9 +90,10 @@ const App: React.FC = () => {
         {!gameState ? (
           <GameSetup onStart={handleStart} />
         ) : (
-          <Dashboard 
-            state={gameState} 
+          <Dashboard
+            state={gameState}
             onUpdatePlayer={handleUpdatePlayerWeight}
+            onPoke={handlePoke}
             onReset={handleReset}
           />
         )}
