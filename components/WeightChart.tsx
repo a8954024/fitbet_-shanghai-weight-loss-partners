@@ -16,69 +16,81 @@ interface WeightChartProps {
 }
 
 export const WeightChart: React.FC<WeightChartProps> = ({ players }) => {
-    // Transform data for the chart
-    // We need an array of objects where each object is a date, and keys are player names
-    const getData = () => {
-        const dataMap = new Map<string, any>();
-
-        players.forEach(player => {
-            // Add initial weight
-            const startDate = player.weightHistory[0]?.date || new Date().toISOString();
-            const startKey = new Date(startDate).toLocaleDateString();
-
-            if (!dataMap.has(startKey)) {
-                dataMap.set(startKey, { date: startKey });
-            }
-            dataMap.get(startKey)[player.name] = player.initialWeight;
-
-            // Add history
-            player.weightHistory.forEach(record => {
-                const dateKey = new Date(record.date).toLocaleDateString();
-                if (!dataMap.has(dateKey)) {
-                    dataMap.set(dateKey, { date: dateKey });
-                }
-                dataMap.get(dateKey)[player.name] = record.weight;
-            });
+    // Transform data for chart
+    // We need to merge all player histories into a single timeline
+    const allDates = new Set<string>();
+    players.forEach(p => {
+        p.weightHistory.forEach(h => {
+            allDates.add(h.date.split('T')[0]);
         });
+    });
 
-        return Array.from(dataMap.values()).sort((a, b) =>
-            new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-    };
+    const sortedDates = Array.from(allDates).sort();
 
-    const data = getData();
-    const colors = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899'];
+    const data = sortedDates.map(date => {
+        const entry: any = { date };
+        players.forEach(p => {
+            // Find weight for this date or use last known weight
+            // Ideally we interpolate, but for now let's find exact or previous
+            const history = p.weightHistory.find(h => h.date.startsWith(date));
+            if (history) {
+                entry[p.name] = history.weight;
+            } else {
+                // Simple fill forward logic could go here, but let's leave gaps for now or just not show
+                // For a smoother chart, we might want to fill forward
+                const previous = p.weightHistory
+                    .filter(h => h.date < date)
+                    .sort((a, b) => b.date.localeCompare(a.date))[0];
+                if (previous) {
+                    entry[p.name] = previous.weight;
+                }
+            }
+        });
+        return entry;
+    });
+
+    const colors = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#eab308'];
 
     return (
         <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                     <XAxis
                         dataKey="date"
-                        stroke="#64748b"
-                        fontSize={12}
-                        tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        stroke="#a8a29e"
+                        tick={{ fill: '#a8a29e', fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => value.substring(5)} // Show MM-DD
                     />
-                    <YAxis stroke="#64748b" fontSize={12} domain={['auto', 'auto']} />
+                    <YAxis
+                        stroke="#a8a29e"
+                        tick={{ fill: '#a8a29e', fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                        domain={['auto', 'auto']}
+                    />
                     <Tooltip
                         contentStyle={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            backgroundColor: 'rgba(28, 25, 23, 0.9)',
+                            border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: '12px',
-                            border: 'none',
-                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
                         }}
+                        itemStyle={{ color: '#e7e5e4' }}
+                        labelStyle={{ color: '#a8a29e', marginBottom: '0.5rem' }}
                     />
-                    <Legend />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
                     {players.map((player, index) => (
                         <Line
                             key={player.id}
                             type="monotone"
                             dataKey={player.name}
                             stroke={colors[index % colors.length]}
-                            strokeWidth={2}
-                            dot={{ r: 4, strokeWidth: 2 }}
-                            activeDot={{ r: 6 }}
+                            strokeWidth={3}
+                            dot={{ r: 4, strokeWidth: 2, fill: '#0c0a09' }}
+                            activeDot={{ r: 6, strokeWidth: 0 }}
                             connectNulls
                         />
                     ))}

@@ -1,32 +1,44 @@
 import React from 'react';
 
-interface CardProps {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
     children: React.ReactNode;
-    className?: string;
     title?: string;
-    description?: string;
     action?: React.ReactNode;
+    variant?: 'default' | 'glass' | 'outlined';
+    hover?: boolean;
 }
 
 export const Card: React.FC<CardProps> = ({
     children,
-    className = '',
     title,
-    description,
-    action
+    action,
+    className = '',
+    variant = 'glass',
+    hover = false,
+    ...props
 }) => {
+    const baseStyles = "rounded-2xl transition-all duration-300 relative overflow-hidden";
+
+    const variants = {
+        default: "bg-slate-900 border border-slate-800 shadow-lg",
+        glass: "bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl",
+        outlined: "bg-transparent border border-slate-700"
+    };
+
+    const hoverStyles = hover ? "hover:translate-y-[-4px] hover:shadow-2xl hover:bg-white/10" : "";
+
     return (
-        <div className={`bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl shadow-slate-200/50 overflow-hidden ${className}`}>
+        <div
+            className={`${baseStyles} ${variants[variant]} ${hoverStyles} ${className}`}
+            {...props}
+        >
             {(title || action) && (
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <div>
-                        {title && <h3 className="text-lg font-bold text-slate-900">{title}</h3>}
-                        {description && <p className="text-sm text-slate-500 mt-0.5">{description}</p>}
-                    </div>
+                <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                    {title && <h3 className="font-bold text-lg text-slate-200">{title}</h3>}
                     {action && <div>{action}</div>}
                 </div>
             )}
-            <div className="p-6">
+            <div className={title || action ? 'p-6' : 'p-6'}>
                 {children}
             </div>
         </div>

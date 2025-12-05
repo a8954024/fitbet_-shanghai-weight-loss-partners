@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Trophy } from 'lucide-react';
+import { Plus, Trash2, Trophy, Target, Wallet, Info } from 'lucide-react';
 import { GameState, Player, PayoutMode, ActivityLog } from '../types';
 import { RULES_CONTENT } from '../constants';
 import { Button } from './ui/Button';
@@ -10,14 +10,13 @@ interface GameSetupProps {
 }
 
 export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
-  const [players, setPlayers] = useState<Omit<Player, 'id' | 'weightHistory' | 'lastUpdateDate' | 'cheers' | 'badges' | 'avatarSeed' | 'joinDate'>[]>([
-    { name: '', initialWeight: 0, currentWeight: 0, targetWeight: 0 }
+  const [players, setPlayers] = useState<Omit<Player, 'id' | 'weightHistory' | 'lastUpdateDate' | 'cheers' | 'badges' | 'avatarSeed' | 'joinDate' | 'streak'>[]>([
+    { name: '', initialWeight: 0, currentWeight: 0, targetWeight: 0, betAmount: 500 }
   ]);
-  const [betAmount, setBetAmount] = useState<number>(500);
   const [payoutMode, setPayoutMode] = useState<PayoutMode>(PayoutMode.HAPPY_TEAM_BUILDING);
 
   const handleAddPlayer = () => {
-    setPlayers([...players, { name: '', initialWeight: 0, currentWeight: 0, targetWeight: 0 }]);
+    setPlayers([...players, { name: '', initialWeight: 0, currentWeight: 0, targetWeight: 0, betAmount: 500 }]);
   };
 
   const handleRemovePlayer = (index: number) => {
@@ -35,13 +34,13 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
         targetWeight: Number((weight * 0.96).toFixed(1)) // Default 4% target
       };
     } else {
+      // @ts-ignore
       newPlayers[index] = { ...newPlayers[index], [field]: value };
     }
     setPlayers(newPlayers);
   };
 
   const handleStart = () => {
-    // Validate
     if (players.some(p => !p.name || !p.initialWeight)) {
       alert('请填写所有选手信息');
       return;
@@ -56,7 +55,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
       cheers: 0,
       badges: [],
       avatarSeed: Math.random().toString(36).substring(7),
-      joinDate: startDate
+      joinDate: startDate,
+      streak: 0
     }));
 
     const initialLog: ActivityLog = {
@@ -70,126 +70,150 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
       isStarted: true,
       startDate,
       players: fullPlayers,
-      betAmount,
+      betAmount: 0, // Not used anymore
       payoutMode,
-      logs: [initialLog]
+      logs: [initialLog],
+      targetPercentage: 4
     };
 
     onStart(initialState);
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-8 pb-20">
-      <div className="text-center space-y-4 py-10">
-        <div className="inline-block p-4 rounded-full bg-orange-100 mb-4 animate-bounce">
-          <Trophy className="w-12 h-12 text-orange-600" />
+    <div className="max-w-5xl mx-auto space-y-8 pb-20">
+      <div className="text-center space-y-6 py-12 animate-enter">
+        <div className="inline-flex p-6 rounded-full bg-gradient-to-br from-brand-500/20 to-rose-500/20 mb-4 ring-1 ring-white/10 backdrop-blur-3xl">
+          <Trophy className="w-16 h-16 text-brand-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
         </div>
-        <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight">
-          魔都 <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">甩肉</span> 合伙人
+        <h1 className="text-5xl md:text-7xl font-display font-black tracking-tight text-white">
+          魔都 <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-rose-500">甩肉</span> 合伙人
         </h1>
-        <p className="text-xl text-slate-500 max-w-2xl mx-auto">
+        <p className="text-xl text-stone-400 max-w-2xl mx-auto font-light">
           不仅仅是减肥，更是一场关于意志力与团队荣誉的较量。
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card title="📜 游戏规则">
-          <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
-            <p>1. <strong>目标</strong>: 4周内减重 4%</p>
-            <p>2. <strong>赌注</strong>: 每人投入 ¥{betAmount} 进入奖池</p>
-            <p>3. <strong>结算</strong>: 达标者瓜分奖池，未达标者本金充公</p>
-            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-              <h4 className="font-bold text-orange-800 mb-2">当前模式: {RULES_CONTENT.modes.find(m => m.id === payoutMode)?.name}</h4>
-              <p className="text-orange-700">{RULES_CONTENT.modes.find(m => m.id === payoutMode)?.desc}</p>
-            </div>
-          </div>
-        </Card>
+      <div className="grid md:grid-cols-12 gap-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        {/* Left Column: Rules & Settings */}
+        <div className="md:col-span-5 space-y-6">
+          <Card title="📜 游戏规则" variant="glass" className="h-full">
+            <div className="space-y-6">
+              <div className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
+                <Target className="w-6 h-6 text-brand-400 mt-1 shrink-0" />
+                <div>
+                  <h4 className="font-bold text-stone-200">目标</h4>
+                  <p className="text-sm text-stone-400">4周内减重 <span className="text-brand-400 font-bold">4%</span></p>
+                </div>
+              </div>
 
-        <Card title="⚙️ 游戏设置">
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">人均赌注 (¥)</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[100, 200, 500, 1000].map(amount => (
-                  <button
-                    key={amount}
-                    onClick={() => setBetAmount(amount)}
-                    className={`px-4 py-2 rounded-lg font-bold transition-all ${betAmount === amount ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                  >
-                    ¥{amount}
-                  </button>
-                ))}
+              <div className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
+                <Wallet className="w-6 h-6 text-brand-400 mt-1 shrink-0" />
+                <div>
+                  <h4 className="font-bold text-stone-200">赌注</h4>
+                  <p className="text-sm text-stone-400">每人自定义投入金额进入奖池</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
+                <Info className="w-6 h-6 text-brand-400 mt-1 shrink-0" />
+                <div>
+                  <h4 className="font-bold text-stone-200">结算模式</h4>
+                  <div className="mt-2">
+                    <select
+                      className="w-full bg-stone-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-stone-300 focus:ring-2 focus:ring-brand-500 outline-none"
+                      value={payoutMode}
+                      onChange={(e) => setPayoutMode(e.target.value as PayoutMode)}
+                    >
+                      {RULES_CONTENT.modes.map(mode => (
+                        <option key={mode.id} value={mode.id}>{mode.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-stone-500 mt-2">
+                      {RULES_CONTENT.modes.find(m => m.id === payoutMode)?.desc}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
+          </Card>
+        </div>
 
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">奖金分配模式</label>
-              <select
-                className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
-                value={payoutMode}
-                onChange={(e) => setPayoutMode(e.target.value as PayoutMode)}
-              >
-                {RULES_CONTENT.modes.map(mode => (
-                  <option key={mode.id} value={mode.id}>{mode.name}</option>
-                ))}
-              </select>
+        {/* Right Column: Players */}
+        <div className="md:col-span-7">
+          <Card className="h-full" variant="glass">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                👥 参赛选手
+                <span className="text-sm font-normal text-stone-500 bg-white/5 px-2 py-0.5 rounded-full">{players.length}人</span>
+              </h3>
+              <Button size="sm" variant="secondary" onClick={handleAddPlayer} icon={<Plus className="w-4 h-4" />}>
+                添加
+              </Button>
             </div>
-          </div>
-        </Card>
+
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+              {players.map((player, index) => (
+                <div key={index} className="group relative bg-stone-900/40 p-5 rounded-2xl border border-white/5 hover:border-brand-500/30 transition-all duration-300">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+                    <div className="sm:col-span-4">
+                      <label className="text-xs font-bold text-stone-500 uppercase mb-1.5 block">名字</label>
+                      <input
+                        className="w-full bg-transparent border-b border-white/10 py-2 text-lg font-medium text-white focus:border-brand-500 focus:outline-none placeholder:text-stone-700 transition-colors"
+                        value={player.name}
+                        onChange={e => handlePlayerChange(index, 'name', e.target.value)}
+                        placeholder="输入名字"
+                      />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <label className="text-xs font-bold text-stone-500 uppercase mb-1.5 block">初始体重</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          className="w-full bg-transparent border-b border-white/10 py-2 text-lg font-medium text-white focus:border-brand-500 focus:outline-none placeholder:text-stone-700 transition-colors"
+                          value={player.initialWeight || ''}
+                          onChange={e => handlePlayerChange(index, 'initialWeight', e.target.value)}
+                          placeholder="0.0"
+                        />
+                        <span className="absolute right-0 bottom-2 text-sm text-stone-600">kg</span>
+                      </div>
+                    </div>
+                    <div className="sm:col-span-4">
+                      <label className="text-xs font-bold text-stone-500 uppercase mb-1.5 block">赌注金额</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          className="w-full bg-transparent border-b border-white/10 py-2 text-lg font-medium text-brand-400 focus:border-brand-500 focus:outline-none transition-colors"
+                          value={player.betAmount || ''}
+                          onChange={e => handlePlayerChange(index, 'betAmount', Number(e.target.value))}
+                          placeholder="500"
+                        />
+                        <span className="absolute right-0 bottom-2 text-sm text-stone-600">¥</span>
+                      </div>
+                    </div>
+                    <div className="sm:col-span-1 flex justify-end">
+                      {players.length > 1 && (
+                        <button
+                          onClick={() => handleRemovePlayer(index)}
+                          className="p-2 text-stone-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
 
-      <Card title="👥 选手列表" action={<Button size="sm" variant="outline" onClick={handleAddPlayer} leftIcon={<Plus className="w-4 h-4" />}>添加选手</Button>}>
-        <div className="space-y-4">
-          {players.map((player, index) => (
-            <div key={index} className="flex flex-col md:flex-row gap-4 items-start md:items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
-              <div className="flex-1 w-full">
-                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">名字</label>
-                <input
-                  className="input-field"
-                  value={player.name}
-                  onChange={e => handlePlayerChange(index, 'name', e.target.value)}
-                  placeholder="你的大名"
-                />
-              </div>
-              <div className="w-full md:w-32">
-                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">初始体重 (kg)</label>
-                <input
-                  type="number"
-                  className="input-field"
-                  value={player.initialWeight || ''}
-                  onChange={e => handlePlayerChange(index, 'initialWeight', e.target.value)}
-                  placeholder="0.0"
-                />
-              </div>
-              <div className="w-full md:w-32">
-                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">目标体重 (kg)</label>
-                <input
-                  type="number"
-                  className="input-field bg-slate-100 text-slate-500"
-                  value={player.targetWeight || ''}
-                  onChange={e => handlePlayerChange(index, 'targetWeight', Number(e.target.value))}
-                  placeholder="自动计算"
-                />
-              </div>
-              {players.length > 1 && (
-                <button
-                  onClick={() => handleRemovePlayer(index)}
-                  className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <div className="flex justify-center pt-8">
+      <div className="flex justify-center pt-8 animate-fade-in" style={{ animationDelay: '0.4s' }}>
         <Button
           size="lg"
           onClick={handleStart}
-          className="w-full md:w-auto px-12 py-4 text-xl shadow-xl shadow-orange-200"
-          rightIcon={<Trophy className="w-6 h-6" />}
+          className="w-full md:w-auto px-16 py-5 text-xl font-bold shadow-2xl shadow-brand-500/30 hover:scale-105"
+          icon={<Trophy className="w-6 h-6" />}
         >
           开启挑战
         </Button>

@@ -1,47 +1,43 @@
 import React from 'react';
 import { ActivityLog } from '../types';
-import { Trophy, TrendingDown, UserPlus, PartyPopper } from 'lucide-react';
+import { Avatar } from './Avatar';
 
 interface ActivityFeedProps {
     logs: ActivityLog[];
 }
 
 export const ActivityFeed: React.FC<ActivityFeedProps> = ({ logs }) => {
-    const getIcon = (type: ActivityLog['type']) => {
-        switch (type) {
-            case 'WEIGHT_UPDATE': return <TrendingDown className="w-4 h-4 text-blue-500" />;
-            case 'JOIN': return <UserPlus className="w-4 h-4 text-green-500" />;
-            case 'CHEER': return <PartyPopper className="w-4 h-4 text-orange-500" />;
-            case 'GAME_START': return <Trophy className="w-4 h-4 text-yellow-500" />;
-            default: return <div className="w-2 h-2 rounded-full bg-slate-400" />;
-        }
-    };
+    const sortedLogs = [...logs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    if (logs.length === 0) {
+        return (
+            <div className="text-center py-10 text-slate-500">
+                <p>暂无动态</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-            {logs.length === 0 && (
-                <div className="text-center text-slate-400 py-8 text-sm">
-                    暂无动态
-                </div>
-            )}
-            {logs.slice().reverse().map((log) => (
-                <div key={log.id} className="flex gap-3 items-start p-3 rounded-xl bg-white/40 border border-white/40 hover:bg-white/60 transition-colors">
-                    <div className="mt-1 p-2 rounded-full bg-white shadow-sm">
-                        {getIcon(log.type)}
+        <div className="space-y-4 max-h-full overflow-y-auto custom-scrollbar pr-2">
+            {sortedLogs.map((log) => (
+                <div key={log.id} className="flex gap-3 items-start animate-fade-in group">
+                    <div className="mt-1">
+                        {log.avatarSeed ? (
+                            <Avatar seed={log.avatarSeed} size="sm" />
+                        ) : (
+                            <div className="w-8 h-8 rounded-full bg-brand-500/20 flex items-center justify-center ring-1 ring-brand-500/40">
+                                <div className="w-2 h-2 rounded-full bg-brand-500" />
+                            </div>
+                        )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-800 font-medium">
-                            {log.playerName && <span className="text-slate-900 font-bold">{log.playerName} </span>}
-                            {log.message}
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">
-                            {new Date(log.timestamp).toLocaleString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            })}
-                        </p>
+                    <div className="flex-1 bg-white/5 rounded-lg p-3 border border-white/5 group-hover:bg-white/10 transition-colors">
+                        <div className="flex justify-between items-start">
+                            <span className="font-bold text-slate-300 text-sm">{log.playerName || '系统'}</span>
+                            <span className="text-xs text-slate-500">
+                                {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </div>
+                        <p className="text-sm text-slate-400 mt-1">{log.message}</p>
                     </div>
                 </div>
             ))}

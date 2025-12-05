@@ -1,27 +1,26 @@
 import React from 'react';
 
 interface AvatarProps {
-  seed: string;
+  seed?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
-  animate?: boolean;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ seed, size = 'md', className = '', animate = true }) => {
+export const Avatar: React.FC<AvatarProps> = ({ seed, size = 'md', className = '' }) => {
   const sizeClasses = {
-    sm: 'w-10 h-10',
-    md: 'w-16 h-16',
-    lg: 'w-24 h-24',
-    xl: 'w-32 h-32'
+    sm: 'w-8 h-8',
+    md: 'w-10 h-10',
+    lg: 'w-14 h-14',
+    xl: 'w-20 h-20'
   };
 
-  const src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&backgroundColor=c0aede,b6e3f4,ffdfbf&clothing=collarAndSweater,hoodie,shirtCrewNeck&mouth=smile,default&eyebrows=default`;
+  const avatarUrl = `https://api.dicebear.com/7.x/notionists/svg?seed=${seed || 'default'}&backgroundColor=ffdfbf,ffd5dc,c0aede,b6e3f4,c1f4c5`;
 
   return (
-    <div className={`rounded-full overflow-hidden border-4 border-white shadow-lg bg-gray-100 ${sizeClasses[size]} ${className} ${animate ? 'animate-float' : ''}`}>
-      <img 
-        src={src} 
-        alt="Avatar" 
+    <div className={`relative rounded-full overflow-hidden bg-slate-100 ring-2 ring-white/20 ${sizeClasses[size]} ${className}`}>
+      <img
+        src={avatarUrl}
+        alt="Avatar"
         className="w-full h-full object-cover"
       />
     </div>

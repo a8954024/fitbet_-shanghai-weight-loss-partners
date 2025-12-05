@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameSetup } from './components/GameSetup';
 import { Dashboard } from './components/Dashboard';
+import { Layout } from './components/Layout';
 import { GameState } from './types';
 
 const App: React.FC = () => {
@@ -71,37 +72,19 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen font-sans pb-10">
-      <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">⚖️</span>
-            <span className="font-black text-xl tracking-tight bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
-              FitBet
-            </span>
-          </div>
-          {gameState && (
-            <div className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-              目标: -4%
-            </div>
-          )}
-        </div>
-      </header>
-
-      <main className="pt-6">
-        {!gameState ? (
-          <GameSetup onStart={handleStart} />
-        ) : (
-          <Dashboard
-            state={gameState}
-            onUpdatePlayer={handleUpdatePlayerWeight}
-            onPoke={handlePoke}
-            onReset={handleReset}
-            onUpdateState={setGameState}
-          />
-        )}
-      </main>
-    </div>
+    <Layout gameState={gameState} onReset={handleReset}>
+      {!gameState ? (
+        <GameSetup onStart={handleStart} />
+      ) : (
+        <Dashboard
+          state={gameState}
+          onUpdatePlayer={handleUpdatePlayerWeight}
+          onPoke={handlePoke}
+          onReset={handleReset}
+          onUpdateState={setGameState}
+        />
+      )}
+    </Layout>
   );
 };
 

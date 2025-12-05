@@ -1,38 +1,47 @@
+export enum PayoutMode {
+  WINNER_TAKES_ALL = 'WINNER_TAKES_ALL',
+  LADDER = 'LADDER',
+  HAPPY_TEAM_BUILDING = 'HAPPY_TEAM_BUILDING'
+}
+
+export interface ActivityLog {
+  id: string;
+  type: 'JOIN' | 'WEIGHT_UPDATE' | 'CHEER' | 'GAME_START';
+  playerId?: number;
+  playerName?: string;
+  message: string;
+  timestamp: string;
+  avatarSeed?: string;
+}
+
+export interface WeightEntry {
+  date: string;
+  weight: number;
+}
+
 export interface Player {
   id: number;
   name: string;
   initialWeight: number;
   currentWeight: number;
   targetWeight: number;
-  weightHistory: Array<{ date: string; weight: number }>;
-  lastUpdateDate: string;
+  weightHistory: WeightEntry[];
   cheers: number;
-  badges: string[];
-  avatarSeed: string;
-  joinDate: string; // New: Track when user joined
-}
-
-export interface ActivityLog {
-  id: string;
-  type: 'WEIGHT_UPDATE' | 'JOIN' | 'CHEER' | 'GAME_START';
-  playerId?: number;
-  playerName?: string;
-  message: string;
-  timestamp: string;
-  data?: any;
+  lastUpdateDate?: string;
+  avatarSeed?: string;
+  joinDate?: string;
+  badges?: string[];
+  streak?: number;
+  betAmount: number;
 }
 
 export interface GameState {
   isStarted: boolean;
-  betAmount: number; // Default 500
   startDate: string;
+  endDate?: string;
   players: Player[];
-  payoutMode: PayoutMode | null; // Changed: Can be null initially
-  logs: ActivityLog[]; // New: Activity feed
-}
-
-export enum PayoutMode {
-  WINNER_TAKES_ALL = 'A',
-  HAPPY_TEAM_BUILDING = 'B', // Recommended
-  LADDER = 'C'
+  targetPercentage?: number;
+  betAmount: number; // Kept for backward compatibility or default
+  payoutMode: PayoutMode;
+  logs: ActivityLog[];
 }
