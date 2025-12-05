@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GameSetup } from './components/GameSetup';
 import { Dashboard } from './components/Dashboard';
 import { Layout } from './components/Layout';
-import { GameState, ActivityLog, Player } from './types';
+import { GameState } from './types';
 import { supabaseService } from './services/supabaseService';
 
 const App: React.FC = () => {
