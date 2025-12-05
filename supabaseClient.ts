@@ -39,7 +39,11 @@ try {
             select: () => ({
                 order: () => ({ limit: () => Promise.resolve({ data: [], error: new Error('Supabase not configured') }) }),
                 single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-                ...dummyChain()
+                eq: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+                limit: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+                delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+                insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+                update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
             }),
             insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }),
             update: () => ({ eq: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }),
