@@ -1,231 +1,313 @@
 import React, { useState } from 'react';
-import { GameState, PayoutMode } from '../types';
-import { PlayerDashboard } from './PlayerDashboard';
-import { RULES_CONTENT } from '../constants';
-import { Trophy, Calendar, Info, RefreshCw, Copy, Check } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  Cell
-} from 'recharts';
+  Users,
+  Settings,
+  Plus,
+  PartyPopper,
+  Activity,
+  ArrowUp,
+  ArrowDown,
+  Minus
+} from 'lucide-react';
+import { GameState, Player, ActivityLog } from '../types';
+import { RULES_CONTENT } from '../constants';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { WeightChart } from './WeightChart';
+import { ActivityFeed } from './ActivityFeed';
+import { Avatar } from './Avatar';
 
 interface DashboardProps {
   state: GameState;
   onUpdatePlayer: (id: number, newWeight: number) => void;
+  onPoke: (id: number) => void;
   onReset: () => void;
+  onUpdateState: (newState: GameState) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ state, onUpdatePlayer, onReset }) => {
-  const [showRules, setShowRules] = useState(false);
-  const [copied, setCopied] = useState(false);
+export const Dashboard: React.FC<DashboardProps> = ({
+  state,
+  onUpdatePlayer,
+  onPoke,
+  onReset,
+  onUpdateState
+}) => {
+  const [showSettings, setShowSettings] = useState(false);
+  const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newPlayerWeight, setNewPlayerWeight] = useState('');
 
-  const totalPool = state.betAmount * state.players.length;
-  const winners = state.players.filter(p => p.currentWeight <= p.targetWeight);
-  const losers = state.players.filter(p => p.currentWeight > p.targetWeight);
+  const handleWeightUpdate = (player: Player, weightStr: string) => {
+    const weight = parseFloat(weightStr);
+    if (isNaN(weight)) return;
 
-  // Data for Chart
-  const chartData = state.players.map(p => ({
-    name: p.name,
-    progress: ((p.initialWeight - p.currentWeight) / p.initialWeight) * 100,
-    target: 4 // The 4% line
-  }));
+    onUpdatePlayer(player.id, weight);
 
-  const handleCopyReport = () => {
-    const daysPassed = Math.floor((new Date().getTime() - new Date(state.startDate).getTime()) / (1000 * 3600 * 24)) + 1;
-    const report = `【魔都甩肉计划 Season 1】
-📅 进度：Day ${daysPassed} / 28
-💰 奖池：¥${totalPool}
+    // Add log
+    const newLog: ActivityLog = {
+      id: crypto.randomUUID(),
+      type: 'WEIGHT_UPDATE',
+      playerId: player.id,
+      playerName: player.name,
+      message: `更新了体重: ${weight}kg`,
+      timestamp: new Date().toISOString()
+    };
 
-📊 战况播报：
-${state.players.map(p => {
-  const loss = p.initialWeight - p.currentWeight;
-  const pct = (loss / p.initialWeight) * 100;
-  const isTargetMet = pct >= 4;
-  return `- ${p.name}: ${loss >= 0 ? '减去' : '胖了'} ${Math.abs(loss).toFixed(1)}kg (${pct.toFixed(1)}%) ${isTargetMet ? '✅ 达标' : '⚠️ 加油'}`;
-}).join('\n')}
+    onUpdateState({
+      ...state,
+      logs: [...(state.logs || []), newLog]
+    });
+  };
 
-${winners.length === 4 ? '🎉 全员达标！庄家瑟瑟发抖！' : '💪 没达标的请注意，¥' + state.betAmount + ' 正在离你而去！'}
-明早记得空腹打卡！`;
+  const handleAddPlayer = () => {
+    if (!newPlayerName || !newPlayerWeight) return;
 
-    navigator.clipboard.writeText(report);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const weight = parseFloat(newPlayerWeight);
+    const newPlayer: Player = {
+      id: Date.now(),
+      name: newPlayerName,
+      initialWeight: weight,
+      currentWeight: weight,
+      targetWeight: Number((weight * 0.96).toFixed(1)),
+      weightHistory: [{ date: new Date().toISOString(), weight }],
+      lastUpdateDate: new Date().toISOString(),
+      cheers: 0,
+      badges: [],
+      avatarSeed: Math.random().toString(36).substring(7),
+      joinDate: new Date().toISOString()
+    };
+
+    const newLog: ActivityLog = {
+      id: crypto.randomUUID(),
+      type: 'JOIN',
+      playerName: newPlayerName,
+      message: '加入了挑战！',
+      timestamp: new Date().toISOString()
+    };
+
+    onUpdateState({
+      ...state,
+      players: [...state.players, newPlayer],
+      logs: [...(state.logs || []), newLog]
+    });
+
+    setNewPlayerName('');
+    setNewPlayerWeight('');
+    setShowAddPlayer(false);
+  };
+
+  const handleCheer = (targetPlayer: Player) => {
+    onPoke(targetPlayer.id);
+
+    const newLog: ActivityLog = {
+      id: crypto.randomUUID(),
+      type: 'CHEER',
+      playerName: '有人', // Anonymous cheer or could be current user if we had auth
+      message: `给 ${targetPlayer.name} 加油打气！`,
+      timestamp: new Date().toISOString()
+    };
+
+    onUpdateState({
+      ...state,
+      logs: [...(state.logs || []), newLog]
+    });
+  };
+
+  const getProgress = (player: Player) => {
+    const totalLoss = player.initialWeight - player.currentWeight;
+    const targetLoss = player.initialWeight - player.targetWeight;
+    const percentage = (totalLoss / targetLoss) * 100;
+    return Math.min(Math.max(percentage, 0), 100);
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-6 pb-20">
+    <div className="max-w-6xl mx-auto p-4 space-y-6 pb-20">
       {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-gradient-to-br from-orange-400 to-orange-600 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
-          <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
-            <Trophy size={140} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-orange-500 to-red-600 text-white border-none">
+          <div className="text-white/80 text-sm font-medium mb-1">总奖池</div>
+          <div className="text-3xl font-bold">¥{state.betAmount * state.players.length}</div>
+        </Card>
+        <Card>
+          <div className="text-slate-500 text-sm font-medium mb-1">参赛人数</div>
+          <div className="text-3xl font-bold text-slate-900">{state.players.length}</div>
+        </Card>
+        <Card>
+          <div className="text-slate-500 text-sm font-medium mb-1">总减重</div>
+          <div className="text-3xl font-bold text-green-600">
+            {state.players.reduce((acc, p) => acc + (p.initialWeight - p.currentWeight), 0).toFixed(1)}kg
           </div>
-          <div className="relative z-10">
-            <p className="text-orange-100 font-medium mb-1">奖金池 (Pool)</p>
-            <h2 className="text-5xl font-bold">¥{totalPool}</h2>
-            <p className="text-sm mt-2 opacity-90">
-              {winners.length > 0 
-                ? `${winners.length} 人达标` 
-                : "无人达标，加油！"}
-            </p>
+        </Card>
+        <Card>
+          <div className="text-slate-500 text-sm font-medium mb-1">剩余天数</div>
+          <div className="text-3xl font-bold text-blue-600">
+            {Math.max(0, 28 - Math.floor((new Date().getTime() - new Date(state.startDate).getTime()) / (1000 * 60 * 60 * 24)))}
           </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-6 shadow-md border border-slate-100 flex flex-col justify-center">
-          <div className="flex items-center gap-3 mb-2 text-slate-500">
-            <Calendar className="w-5 h-5" />
-            <span className="font-semibold uppercase text-xs tracking-wider">时间线</span>
-          </div>
-          <div className="space-y-3">
-             <div className="flex justify-between text-sm">
-               <span>已进行</span>
-               <span className="font-bold text-slate-800">Day {Math.floor((new Date().getTime() - new Date(state.startDate).getTime()) / (1000 * 3600 * 24)) + 1} / 28</span>
-             </div>
-             <div className="w-full bg-slate-100 rounded-full h-2">
-               <div className="bg-blue-500 h-2 rounded-full" style={{ width: '4%' }}></div>
-             </div>
-             <p className="text-xs text-slate-400">记得每周一早晨空腹打卡!</p>
-          </div>
-        </div>
-
-        <div className="bg-indigo-50 rounded-3xl p-6 shadow-md border border-indigo-100 flex flex-col justify-center relative">
-          <button 
-            onClick={() => setShowRules(!showRules)}
-            className="absolute top-4 right-4 text-indigo-400 hover:text-indigo-600"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-          <p className="text-indigo-600 font-bold mb-2">当前模式: {RULES_CONTENT.modes.find(m => m.id === PayoutMode.HAPPY_TEAM_BUILDING)?.name}</p>
-          <div className="text-sm text-indigo-800 bg-white/50 p-3 rounded-xl backdrop-blur-sm">
-             {losers.length > 0 ? (
-               <p>
-                 目前 <span className="font-bold text-red-500">{losers.map(l => l.name).join(', ')}</span> 没达标。
-                 如果维持现状，这 {losers.length * state.betAmount} 元将用于请大家吃大餐！🍖
-               </p>
-             ) : (
-               <p className="text-green-600 font-bold">全员达标！这不科学！看来要为了健康而战了！</p>
-             )}
-          </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        {state.players.map(player => (
-          <PlayerDashboard 
-            key={player.id} 
-            player={player} 
-            onUpdateWeight={onUpdatePlayer} 
-          />
-        ))}
-      </div>
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Main Content - Left Column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Weight Chart */}
+          <Card title="📈 减重趋势">
+            <WeightChart players={state.players} />
+          </Card>
 
-      {/* Action Bar */}
-      <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
-         <button
-          onClick={handleCopyReport}
-          className={`flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-white transition-all transform hover:scale-105 shadow-lg ${copied ? 'bg-green-500' : 'bg-slate-800 hover:bg-slate-900'}`}
-         >
-           {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-           {copied ? '已复制到剪贴板' : '复制微信群战报'}
-         </button>
-      </div>
-
-      {/* Visualization */}
-      <div className="bg-white rounded-3xl shadow-xl p-8 mb-12">
-        <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-500" />
-          减重排行榜 (%)
-        </h3>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" domain={[0, 'auto']} hide />
-              <YAxis dataKey="name" type="category" width={80} tick={{fill: '#64748b', fontSize: 14}} axisLine={false} tickLine={false} />
-              <Tooltip 
-                cursor={{fill: '#f1f5f9'}}
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-              />
-              <ReferenceLine x={4} stroke="green" strokeDasharray="3 3" label={{ position: 'top', value: 'Goal (4%)', fill: 'green', fontSize: 12 }} />
-              <Bar dataKey="progress" radius={[0, 10, 10, 0]} barSize={32}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.progress >= 4 ? '#22c55e' : entry.progress < 0 ? '#ef4444' : '#3b82f6'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Rules Modal / Section */}
-      {showRules && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowRules(false)}>
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-8" onClick={e => e.stopPropagation()}>
-            <h2 className="text-2xl font-bold mb-4">{RULES_CONTENT.title}</h2>
-            
-            <div className="space-y-6 text-slate-700">
-              <section>
-                <h3 className="font-bold text-lg mb-2 text-slate-900">1. 核心机制</h3>
-                <ul className="list-disc pl-5 space-y-1">
-                  {RULES_CONTENT.mechanics.map((m, i) => <li key={i}>{m}</li>)}
-                </ul>
-              </section>
-              
-              <section>
-                <h3 className="font-bold text-lg mb-2 text-slate-900">2. 金额设定</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {RULES_CONTENT.money.map((m, i) => (
-                    <div key={i} className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                      <div className="font-bold text-orange-600">¥{m.amount}</div>
-                      <div className="text-xs font-semibold">{m.label}</div>
-                      <div className="text-xs text-slate-500 mt-1">{m.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <h3 className="font-bold text-lg mb-2 text-slate-900">3. 奖惩分配 (推荐玩法B)</h3>
-                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                  <p className="font-bold text-blue-800">快乐团建 (友谊模式)</p>
-                  <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-blue-700">
-                    <li><strong>达标者：</strong>拿回自己的本金。</li>
-                    <li><strong>未达标者：</strong>保证金充公。</li>
-                    <li><strong>资金用途：</strong>充公的钱用来请所有人（包括输的人）去吃一顿上海的高端自助或火锅。</li>
-                    <li><em>心理学：输的人是“金主爸爸”，赢的人免费蹭饭，大家都能聚会，感情不会破裂。</em></li>
-                  </ul>
-                </div>
-              </section>
+          {/* Player List */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Users className="w-5 h-5" /> 选手榜单
+              </h3>
+              <Button size="sm" variant="outline" onClick={() => setShowAddPlayer(!showAddPlayer)} leftIcon={<Plus className="w-4 h-4" />}>
+                添加选手
+              </Button>
             </div>
 
-            <button 
-              onClick={() => setShowRules(false)}
-              className="mt-8 w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900"
-            >
-              关闭
-            </button>
+            {showAddPlayer && (
+              <Card className="bg-blue-50/50 border-blue-100">
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">名字</label>
+                    <input
+                      className="input-field"
+                      value={newPlayerName}
+                      onChange={e => setNewPlayerName(e.target.value)}
+                      placeholder="新选手名字"
+                    />
+                  </div>
+                  <div className="w-32">
+                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">初始体重</label>
+                    <input
+                      type="number"
+                      className="input-field"
+                      value={newPlayerWeight}
+                      onChange={e => setNewPlayerWeight(e.target.value)}
+                      placeholder="kg"
+                    />
+                  </div>
+                  <Button onClick={handleAddPlayer}>加入</Button>
+                </div>
+              </Card>
+            )}
+
+            {state.players.map(player => {
+              const progress = getProgress(player);
+              const isTargetReached = player.currentWeight <= player.targetWeight;
+              const diff = player.currentWeight - player.initialWeight;
+
+              return (
+                <Card key={player.id} className={`transition-all ${isTargetReached ? 'ring-2 ring-green-500 bg-green-50/30' : ''}`}>
+                  <div className="flex items-center gap-4">
+                    <Avatar seed={player.avatarSeed} size="lg" />
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h4 className="font-bold text-lg text-slate-900 flex items-center gap-2">
+                            {player.name}
+                            {isTargetReached && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">达标!</span>}
+                          </h4>
+                          <div className="text-sm text-slate-500 flex items-center gap-2">
+                            <span>当前: {player.currentWeight}kg</span>
+                            <span className="text-slate-300">|</span>
+                            <span>目标: {player.targetWeight}kg</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-lg font-bold ${diff <= 0 ? 'text-green-600' : 'text-red-500'} flex items-center justify-end gap-1`}>
+                            {diff > 0 ? <ArrowUp className="w-4 h-4" /> : diff < 0 ? <ArrowDown className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+                            {Math.abs(diff).toFixed(1)}kg
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {((diff / player.initialWeight) * 100).toFixed(1)}%
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
+                        <div
+                          className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ${isTargetReached ? 'bg-green-500' : 'bg-orange-500'}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="number"
+                            className="w-24 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                            placeholder="新体重"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleWeightUpdate(player, (e.target as HTMLInputElement).value);
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }}
+                          />
+                          <span className="text-xs text-slate-400">按回车更新</span>
+                        </div>
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleCheer(player)}
+                          className="text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                          leftIcon={<PartyPopper className="w-4 h-4" />}
+                        >
+                          加油 ({player.cheers || 0})
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
-      )}
 
-      {/* Reset Button */}
-      <div className="text-center mt-12">
-        <button 
-          onClick={() => {
-            if(confirm("确定要重置所有数据重新开始吗？这会清除本地缓存。")) onReset();
-          }}
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-red-500 transition-colors text-sm"
-        >
-          <RefreshCw className="w-4 h-4" />
-          重置活动
-        </button>
+        {/* Sidebar - Right Column */}
+        <div className="space-y-6">
+          {/* Activity Feed */}
+          <Card title="📢 实时动态" action={<Activity className="w-4 h-4 text-slate-400" />}>
+            <ActivityFeed logs={state.logs || []} />
+          </Card>
+
+          {/* Settings Card */}
+          <Card title="⚙️ 游戏设置" action={<Button size="sm" variant="ghost" onClick={() => setShowSettings(!showSettings)}><Settings className="w-4 h-4" /></Button>}>
+            {showSettings ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">挑战模式</label>
+                  <div className="space-y-2">
+                    {RULES_CONTENT.modes.map(mode => (
+                      <div
+                        key={mode.id}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all ${state.payoutMode === mode.id ? 'bg-orange-50 border-orange-200 ring-1 ring-orange-500' : 'bg-white border-slate-200 hover:border-orange-200'}`}
+                        onClick={() => onUpdateState({ ...state, payoutMode: mode.id })}
+                      >
+                        <div className="font-bold text-sm text-slate-900">{mode.name}</div>
+                        <div className="text-xs text-slate-500 mt-1">{mode.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100">
+                  <Button variant="danger" size="sm" onClick={onReset} className="w-full">
+                    重置游戏
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500">
+                当前模式: <span className="font-bold text-slate-900">{RULES_CONTENT.modes.find(m => m.id === state.payoutMode)?.name || '未设置'}</span>
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );

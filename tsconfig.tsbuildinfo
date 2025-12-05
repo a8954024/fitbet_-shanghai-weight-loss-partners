@@ -1,1 +1,1 @@
-{"root":["./constants.ts","./types.ts","./vite.config.ts","./app.tsx","./index.tsx","./components/avatar.tsx","./components/dashboard.tsx","./components/gamesetup.tsx","./components/playerdashboard.tsx"],"errors":true,"version":"5.9.3"}
+{"root":["./constants.ts","./types.ts","./vite.config.ts","./app.tsx","./index.tsx","./components/activityfeed.tsx","./components/avatar.tsx","./components/dashboard.tsx","./components/gamesetup.tsx","./components/playerdashboard.tsx","./components/weightchart.tsx","./components/ui/button.tsx","./components/ui/card.tsx"],"version":"5.9.3"}

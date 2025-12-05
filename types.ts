@@ -9,6 +9,17 @@ export interface Player {
   cheers: number;
   badges: string[];
   avatarSeed: string;
+  joinDate: string; // New: Track when user joined
+}
+
+export interface ActivityLog {
+  id: string;
+  type: 'WEIGHT_UPDATE' | 'JOIN' | 'CHEER' | 'GAME_START';
+  playerId?: number;
+  playerName?: string;
+  message: string;
+  timestamp: string;
+  data?: any;
 }
 
 export interface GameState {
@@ -16,6 +27,8 @@ export interface GameState {
   betAmount: number; // Default 500
   startDate: string;
   players: Player[];
+  payoutMode: PayoutMode | null; // Changed: Can be null initially
+  logs: ActivityLog[]; // New: Activity feed
 }
 
 export enum PayoutMode {

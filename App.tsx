@@ -64,29 +64,31 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
-    setGameState(null);
-    localStorage.removeItem('fitbet_messages'); // Also clear messages
+    if (confirm('确定要重置游戏吗？所有数据将丢失。')) {
+      setGameState(null);
+      localStorage.removeItem('fitbet_messages');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div className="min-h-screen font-sans pb-10">
+      <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-30 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">⚖️</span>
-            <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+            <span className="font-black text-xl tracking-tight bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
               FitBet
             </span>
           </div>
           {gameState && (
-            <div className="text-sm font-medium text-slate-500">
-              Goal: -4%
+            <div className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+              目标: -4%
             </div>
           )}
         </div>
       </header>
 
-      <main>
+      <main className="pt-6">
         {!gameState ? (
           <GameSetup onStart={handleStart} />
         ) : (
@@ -95,6 +97,7 @@ const App: React.FC = () => {
             onUpdatePlayer={handleUpdatePlayerWeight}
             onPoke={handlePoke}
             onReset={handleReset}
+            onUpdateState={setGameState}
           />
         )}
       </main>
