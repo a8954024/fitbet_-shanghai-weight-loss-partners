@@ -22,12 +22,27 @@ try {
 } catch (error) {
     console.error('Supabase initialization failed:', error);
     // Fallback dummy client to prevent app crash
+    const dummyChain = () => ({
+        select: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+        insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+        update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+        delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+        eq: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+        order: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+        single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+        limit: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    });
+
     supabaseClient = {
         from: () => ({
-            select: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-            insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-            update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-            delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+            select: () => ({
+                order: () => ({ limit: () => Promise.resolve({ data: [], error: new Error('Supabase not configured') }) }),
+                single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+                ...dummyChain()
+            }),
+            insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }),
+            update: () => ({ eq: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }),
+            delete: () => ({ eq: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }),
         }),
         channel: () => ({
             on: () => ({ on: () => ({ on: () => ({ subscribe: () => { } }) }) }),
