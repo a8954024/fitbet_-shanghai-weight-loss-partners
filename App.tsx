@@ -62,9 +62,9 @@ const App: React.FC = () => {
 
       // State will be updated via subscription or we can force fetch
       fetchState();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to start game:', error);
-      alert('Failed to start game. Please try again.');
+      alert(`Failed to start game: ${error.message || JSON.stringify(error)}`);
     }
   };
 
