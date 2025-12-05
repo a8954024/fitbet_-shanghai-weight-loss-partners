@@ -4,6 +4,7 @@ import { GameState, Player, PayoutMode, ActivityLog } from '../types';
 import { RULES_CONTENT } from '../constants';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { ToastContainer, ToastProps } from './ui/Toast';
 
 interface GameSetupProps {
   onStart: (state: GameState) => void;
@@ -14,6 +15,16 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
     { name: '', initialWeight: 0, currentWeight: 0, targetWeight: 0, betAmount: 500 }
   ]);
   const [payoutMode, setPayoutMode] = useState<PayoutMode>(PayoutMode.HAPPY_TEAM_BUILDING);
+  const [toasts, setToasts] = useState<ToastProps[]>([]);
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = Math.random().toString(36).substring(7);
+    setToasts(prev => [...prev, { id, message, type, onClose: removeToast }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
 
   const handleAddPlayer = () => {
     setPlayers([...players, { name: '', initialWeight: 0, currentWeight: 0, targetWeight: 0, betAmount: 500 }]);
@@ -42,7 +53,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
 
   const handleStart = () => {
     if (players.some(p => !p.name || !p.initialWeight)) {
-      alert('请填写所有选手信息');
+      addToast('请填写所有选手信息', 'error');
       return;
     }
 
@@ -80,7 +91,9 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-20">
+    <div className="max-w-5xl mx-auto space-y-8 pb-32 relative">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+
       <div className="text-center space-y-6 py-12 animate-enter">
         <div className="inline-flex p-6 rounded-full bg-gradient-to-br from-brand-500/20 to-rose-500/20 mb-4 ring-1 ring-white/10 backdrop-blur-3xl">
           <Trophy className="w-16 h-16 text-brand-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
@@ -155,7 +168,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
               {players.map((player, index) => (
                 <div key={index} className="group relative bg-stone-900/40 p-5 rounded-2xl border border-white/5 hover:border-brand-500/30 transition-all duration-300">
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
-                    <div className="sm:col-span-4">
+                    {/* Name: 3 cols */}
+                    <div className="sm:col-span-3">
                       <label className="text-xs font-bold text-stone-500 uppercase mb-1.5 block">名字</label>
                       <input
                         className="w-full bg-transparent border-b border-white/10 py-2 text-lg font-medium text-white focus:border-brand-500 focus:outline-none placeholder:text-stone-700 transition-colors"
@@ -164,6 +178,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
                         placeholder="输入名字"
                       />
                     </div>
+                    {/* Initial Weight: 3 cols */}
                     <div className="sm:col-span-3">
                       <label className="text-xs font-bold text-stone-500 uppercase mb-1.5 block">初始体重</label>
                       <div className="relative">
@@ -177,8 +192,23 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
                         <span className="absolute right-0 bottom-2 text-sm text-stone-600">kg</span>
                       </div>
                     </div>
-                    <div className="sm:col-span-4">
-                      <label className="text-xs font-bold text-stone-500 uppercase mb-1.5 block">赌注金额</label>
+                    {/* Target Weight: 3 cols */}
+                    <div className="sm:col-span-3">
+                      <label className="text-xs font-bold text-stone-500 uppercase mb-1.5 block">目标体重</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          className="w-full bg-transparent border-b border-white/10 py-2 text-lg font-medium text-white focus:border-brand-500 focus:outline-none placeholder:text-stone-700 transition-colors"
+                          value={player.targetWeight || ''}
+                          onChange={e => handlePlayerChange(index, 'targetWeight', e.target.value)}
+                          placeholder="默认4%"
+                        />
+                        <span className="absolute right-0 bottom-2 text-sm text-stone-600">kg</span>
+                      </div>
+                    </div>
+                    {/* Bet Amount: 2 cols */}
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-bold text-stone-500 uppercase mb-1.5 block">赌注</label>
                       <div className="relative">
                         <input
                           type="number"
@@ -190,7 +220,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
                         <span className="absolute right-0 bottom-2 text-sm text-stone-600">¥</span>
                       </div>
                     </div>
-                    <div className="sm:col-span-1 flex justify-end">
+                    {/* Delete: 1 col */}
+                    <div className="sm:col-span-1 flex justify-end pb-2">
                       {players.length > 1 && (
                         <button
                           onClick={() => handleRemovePlayer(index)}
@@ -208,11 +239,11 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onStart }) => {
         </div>
       </div>
 
-      <div className="flex justify-center pt-8 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/90 to-transparent z-50 flex justify-center md:relative md:bg-none md:p-0 md:pt-8 animate-fade-in" style={{ animationDelay: '0.4s' }}>
         <Button
           size="lg"
           onClick={handleStart}
-          className="w-full md:w-auto px-16 py-5 text-xl font-bold shadow-2xl shadow-brand-500/30 hover:scale-105"
+          className="w-full md:w-auto px-16 py-5 text-xl font-bold shadow-2xl shadow-brand-500/30 hover:scale-105 active:scale-95 transition-transform"
           icon={<Trophy className="w-6 h-6" />}
         >
           开启挑战
